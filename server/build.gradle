@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '1.4.10'
+    id 'org.jetbrains.kotlin.kapt' version '1.4.10'
+}
+
+group 'org.henchies'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.5.2'
+    testImplementation 'org.junit.platform:junit-platform-runner:1.5.2'
+    testImplementation "io.mockk:mockk:1.10.2"
+
+    implementation 'io.javalin:javalin:3.11.0'
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
+    implementation 'redis.clients:jedis:3.3.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.2'
+    implementation 'com.michael-bull.kotlin-result:kotlin-result:1.1.9'
+    implementation 'com.bugsnag:bugsnag-spring:3.+'
+    implementation 'io.github.microutils:kotlin-logging:1.12.0'
+
+
+    implementation 'com.squareup.moshi:moshi:1.11.0'
+    kapt 'com.squareup.moshi:moshi-kotlin-codegen:1.11.0'
+
+    implementation "org.koin:koin-core:2.1.6"
+    testImplementation "org.koin:koin-test:2.1.6"
+}
+
+compileKotlin {
+    kotlinOptions {
+        freeCompilerArgs += "-XXLanguage:+InlineClasses"
+        freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.flow.Flow.ExperimentalCoroutinesApi"
+        freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        freeCompilerArgs += "-Xopt-in=kotlin.time.ExperimentalTime"
+        freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.FlowPreview"
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
