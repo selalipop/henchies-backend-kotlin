@@ -2,18 +2,19 @@ package repository.redis
 
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.squareup.moshi.Moshi
-import error.ErrResult
-import jedis.JedisFlowPubSub
-import jedis.getJson
-import jedis.setJson
-import jedis.updateJson
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flattenMerge
+import kotlinx.coroutines.flow.flowOf
 import redis.clients.jedis.Jedis
+import util.error.err
+import util.jedis.JedisFlowPubSub
+import util.jedis.getJson
+import util.jedis.setJson
+import util.jedis.updateJson
 import kotlin.time.Duration
 
 abstract class RedisGenericStore<T>(
-    val moshi: Moshi,
     val jedis: Jedis,
     val jedisPubSub: JedisFlowPubSub
 ) {
@@ -22,22 +23,22 @@ abstract class RedisGenericStore<T>(
         redisKey: String,
         redisPubSubKey: String,
         redisTtl: Duration,
-        update: (T) -> T
+        stateUpdate: (T) -> T
     ): Result<Unit, Error> {
 
         val (_, error) = jedis.updateJson(
             redisKey,
             redisPubSubKey,
             redisTtl,
-            update
+            stateUpdate
         )
 
         if (error != null) {
-            return ErrResult(
+            return err(
                 if (error) {
                     "Could not find item with given ID"
                 } else {
-                    "Internal Redis error"
+                    "Internal Redis util.ktor.error"
                 }
             )
         }
@@ -58,7 +59,7 @@ abstract class RedisGenericStore<T>(
             redisTtl
         )
         if (error != null) {
-            return ErrResult("Internal Redis error")
+            return err("Internal Redis util.ktor.error")
         }
         return Ok(Unit)
     }
@@ -71,7 +72,7 @@ abstract class RedisGenericStore<T>(
         val (currentValue, _) = jedis.getJson<T>(redisKey)
         val mappedFlow = flowOf(
             flowOf(currentValue),
-            jedisPubSub.subscribeJsonFlow<T>(redisPubSubKey, moshi),
+            jedisPubSub.subscribeJsonFlow<T>(redisPubSubKey)
         )
             .flattenMerge()
             .filterNotNull()

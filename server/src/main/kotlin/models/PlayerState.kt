@@ -1,22 +1,24 @@
 package models
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import models.id.PlayerId
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class PlayerState(
-    @Json(name = "id")
-    val id: PlayerId,
-    @Json(name = "color")
+    @SerialName("id")
+    val rawId: String,
+    @SerialName("color")
     val color: PlayerColor,
-    @Json(name = "isImposter")
+    @SerialName("isImposter")
     val isImposter: Boolean,
-){
+) {
+    constructor(id: PlayerId, color: PlayerColor) : this(id.value, color, false)
 
+    val id by lazy { PlayerId(rawId) }
 }
 
 
 fun List<PlayerState>.byId(id: PlayerId): PlayerState? {
-    return firstOrNull{ it.id == id}
+    return firstOrNull { it.id == id }
 }

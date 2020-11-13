@@ -2,20 +2,18 @@ package repository.redis
 
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.squareup.moshi.Moshi
-import jedis.*
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
 import models.PlayerSecrets
 import models.id.GameId
 import models.id.PlayerId
 import redis.clients.jedis.Jedis
 import repository.PlayerSecretsStore
-import java.lang.Error
+import util.jedis.JedisFlowPubSub
 import kotlin.time.hours
 
 class RedisPlayerSecretsStore(
-    moshi: Moshi, jedis: Jedis, jedisPubSub: JedisFlowPubSub
-) : RedisGenericStore<PlayerSecrets>(moshi, jedis, jedisPubSub), PlayerSecretsStore {
+    jedis: Jedis, jedisPubSub: JedisFlowPubSub
+) : RedisGenericStore<PlayerSecrets>(jedis, jedisPubSub), PlayerSecretsStore {
     companion object {
         val PlayerGameKeyTtl = 6.hours
     }

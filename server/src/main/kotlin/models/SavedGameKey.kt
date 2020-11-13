@@ -1,12 +1,14 @@
 package models
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class SavedGameKey(
-    @Json(name = "key")
-    val key: GameKey,
-    @Json(name = "ownerIp")
+    @SerialName("key")
+    val rawKey: String,
+    @SerialName("ownerIp")
     val ownerIp: String
-)
+) {
+    val key by lazy { GameKey(rawKey) }
+}

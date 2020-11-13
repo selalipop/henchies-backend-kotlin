@@ -1,17 +1,17 @@
 package models
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 val PingUpdate = ClientUpdate(null, null, true)
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class ClientUpdate(
-    @Json(name = "gameState")
+    @SerialName("gameState")
     val gameState: GameState?,
-    @Json(name = "playerSecrets")
+    @SerialName("playerSecrets")
     val playerSecrets: PlayerSecrets?,
-    @Json(name = "isPing")
+    @SerialName("isPing")
     val isPing: Boolean
 )
 

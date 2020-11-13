@@ -5,7 +5,6 @@ import models.GameKey
 import models.SavedGameKey
 import models.id.GameId
 import models.id.PlayerId
-import java.lang.Error
 
 interface GameKeyStore {
     /***

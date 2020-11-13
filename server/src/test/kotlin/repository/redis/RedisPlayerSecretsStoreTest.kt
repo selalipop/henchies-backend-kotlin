@@ -1,28 +1,29 @@
 package repository.redis
 
-import com.squareup.moshi.Moshi
+import io.mockk.Matcher
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import jedis.JedisFlowPubSub
-import models.GameKey
-import models.InlineStringClassAdapter
-import models.SavedGameKey
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import models.GameState
 import models.PlayerSecrets
+import models.SavedGameKey
 import models.id.GameId
 import models.id.PlayerId
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import redis.clients.jedis.*
+import redis.clients.jedis.Jedis
+import redis.clients.jedis.Transaction
+import util.jedis.JedisFlowPubSub
 
 internal class RedisPlayerSecretsStoreTest {
 
-    val moshi = Moshi.Builder().add(InlineStringClassAdapter()).build()
     val jedis = mockk<Jedis>()
     val pubSub = mockk<JedisFlowPubSub>()
-    val repo = RedisPlayerSecretsStore(moshi, jedis, pubSub)
+    val repo = RedisPlayerSecretsStore(jedis, pubSub)
 
     @BeforeEach
     fun setUp() {
@@ -32,11 +33,20 @@ internal class RedisPlayerSecretsStoreTest {
     fun tearDown() {
     }
 
+    data class GameStateIgnoringTimeMatcher(
+        val expected: GameState,
+        val refEq: Boolean
+    ) : Matcher<GameState> {
+        override fun match(arg: GameState?): Boolean {
+            return arg?.copy(createdAt = 0) == expected.copy(createdAt = 0)
+        }
+    }
+
     @Test
     fun `stores initialized player secrets in Redis`() {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
-        val playerGameKey = SavedGameKey(GameKey("testKey"), "testIp")
+        val playerGameKey = SavedGameKey("testKey", "testIp")
 
 
         every { jedis.set(RedisKeys.playerSecret(gameId, playerId), any(), any()) } returns "Ok."
@@ -71,11 +81,11 @@ internal class RedisPlayerSecretsStoreTest {
     fun updatePlayerSecrets() {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
-        val playerGameKey = SavedGameKey(GameKey("testKey"), "testIp")
+        val playerGameKey = SavedGameKey("testKey", "testIp")
 
         val playerSecrets = PlayerSecrets(false, playerGameKey, 0)
         val modifiedPlayerSecrets = playerSecrets.copy(isImposter = true)
-        val expectedString = moshi.adapter(PlayerSecrets::class.java).toJson(playerSecrets)
+        val expectedString = Json.encodeToString(playerSecrets)
 
         every { jedis.watch(RedisKeys.playerSecret(gameId, playerId)) } returns "Ok."
         every { jedis.get(RedisKeys.playerSecret(gameId, playerId)) } returns expectedString
@@ -83,7 +93,7 @@ internal class RedisPlayerSecretsStoreTest {
         val mockTransaction = mockk<Transaction>()
         every { jedis.multi() } returns mockTransaction
         every { mockTransaction.set(RedisKeys.playerSecret(gameId, playerId), any(), any()) } returns mockk()
-         every {
+        every {
             mockTransaction.publish(
                 RedisKeys.playerSecretPubSub(gameId, playerId),
                 any()

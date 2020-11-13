@@ -1,22 +1,24 @@
 package models
 
-import com.squareup.moshi.Json
-import com.squareup.moshi.JsonClass
-import getUnixTime
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import util.getUnixTime
 
-@JsonClass(generateAdapter = true)
+@Serializable
 data class GameState(
-    @Json(name = "maxPlayers")
+    @SerialName("maxPlayers")
     val maxPlayers: Int,
-    @Json(name = "imposterCount")
+    @SerialName("imposterCount")
     val imposterCount: Int,
-    @Json(name = "phase")
+    @SerialName("phase")
     val phase: GamePhase,
-    @Json(name = "players")
+    @SerialName("players")
     val players: List<PlayerState>,
-    @Json(name = "createdAt")
+    @SerialName("createdAt")
     val createdAt: Long = getUnixTime()
 ) : ClientUpdatePackable {
+
+    val isGameStarted = phase >= GamePhase.Started
     override fun toUpdate() = ClientUpdate(this, null, false)
 
     fun withUpdatedTime(): GameState = this.copy(createdAt = getUnixTime())

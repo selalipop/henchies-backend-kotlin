@@ -2,11 +2,10 @@ package repository
 
 import com.github.michaelbull.result.Result
 import kotlinx.coroutines.flow.Flow
-import models.SavedGameKey
 import models.PlayerSecrets
+import models.SavedGameKey
 import models.id.GameId
 import models.id.PlayerId
-import java.lang.Error
 
 interface PlayerSecretsStore {
     fun updatePlayerSecrets(
