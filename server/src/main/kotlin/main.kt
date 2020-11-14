@@ -4,26 +4,27 @@ import controllers.photon.PlayerJoinedController
 import controllers.photon.PlayerLeftController
 import controllers.photon.RoomClosedController
 import controllers.photon.RoomCreatedController
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
-import org.koin.experimental.builder.factory
 import org.koin.experimental.builder.single
 import org.koin.experimental.builder.singleBy
+import redis.RedisClient
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
+import redis.jedis.JedisClient
 import repository.GameKeyStore
 import repository.GameStateStore
 import repository.PlayerSecretsStore
 import repository.redis.RedisGameKeyStore
 import repository.redis.RedisGameStateStore
 import repository.redis.RedisPlayerSecretsStore
-import util.jedis.JedisFlowPubSub
 import util.logger
 
 private const val DefaultPort = 23567
 private const val DefaultRedisUrl = "localhost"
-fun main() {
+fun main() = runBlocking {
     startKoin {
         printLogger()
     }
@@ -44,6 +45,7 @@ fun appModule(redisUrl: String) = module {
     singleBy<GameStateStore, RedisGameStateStore>()
     singleBy<PlayerSecretsStore, RedisPlayerSecretsStore>()
     singleBy<GameKeyStore, RedisGameKeyStore>()
+    singleBy<RedisClient, JedisClient>()
 
     single<GameKeyController>()
     single<UpdateController>()
@@ -56,5 +58,4 @@ fun appModule(redisUrl: String) = module {
 
     single { JedisPool(redisUrl) }
     factory<Jedis> { get<JedisPool>().resource }
-    factory<JedisFlowPubSub>()
 }

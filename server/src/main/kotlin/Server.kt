@@ -8,6 +8,7 @@ import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
+import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.serialization.*
@@ -20,6 +21,7 @@ import org.koin.core.inject
 import repository.GameStateStore
 import util.JSON
 import util.ktor.forRoute
+import util.logger
 import kotlin.time.seconds
 import kotlin.time.toJavaDuration
 
@@ -35,7 +37,7 @@ class Server : KoinComponent {
     private val playerLeftController: PlayerLeftController by inject()
 
 
-    fun serve(port: Int) {
+    suspend fun serve(port: Int) {
         val gameId = GameId("test")
         gameStateStore.initGameState(gameId, 10, 10)
 
@@ -51,6 +53,14 @@ class Server : KoinComponent {
         install(ContentNegotiation) {
             json(JSON)
         }
+
+        install(CallLogging) {
+            mdc("playerId") { getPlayerIdForCall(it) }
+            mdc("method") { it.request.httpMethod.value }
+            mdc("path") { it.request.path() }
+            mdc("client") { it.request.host() }
+        }
+
         install(StatusPages) {
             exception<Throwable> { cause ->
                 call.respond(
@@ -68,9 +78,13 @@ class Server : KoinComponent {
         }
     }
 
+
     private fun Application.setupRouting() {
         routing {
-            get("/") { call.respondText("Hello Henchies") }
+            get("/") {
+                logger.info { "Hello Henchies!" }
+                call.respondText("Hello Henchies!")
+            }
 
             get("/player/{playerId}/key", forRoute(gameKeyController::getPlayerGameKey))
 
@@ -82,4 +96,9 @@ class Server : KoinComponent {
             webSocket("/updates") { forRoute(updateController::getUpdates) }
         }
     }
+
+    private fun getPlayerIdForCall(it: ApplicationCall) =
+        it.request.header("henchies-player-id") ?: it.parameters["playerId"] ?: it.parameters["playerID"]
+        ?: "no-player-id"
+
 }

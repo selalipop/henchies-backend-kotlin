@@ -1,9 +1,8 @@
 package repository.redis
 
-import io.mockk.Matcher
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
+import com.github.michaelbull.result.Ok
+import io.mockk.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import models.GameState
@@ -13,17 +12,17 @@ import models.id.GameId
 import models.id.PlayerId
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import redis.clients.jedis.Jedis
+import redis.RedisClient
 import redis.clients.jedis.Transaction
-import util.jedis.JedisFlowPubSub
+import redis.setJson
 
 internal class RedisPlayerSecretsStoreTest {
 
-    val jedis = mockk<Jedis>()
-    val pubSub = mockk<JedisFlowPubSub>()
-    val repo = RedisPlayerSecretsStore(jedis, pubSub)
+    val redisMock = mockk<RedisClient>()
+    val repo = RedisPlayerSecretsStore(redisMock)
 
     @BeforeEach
     fun setUp() {
@@ -42,56 +41,72 @@ internal class RedisPlayerSecretsStoreTest {
         }
     }
 
+    data class PlayerSecretsIgnoringTimeMatcher(
+        val expected: PlayerSecrets,
+        val refEq: Boolean
+    ) : Matcher<PlayerSecrets> {
+        override fun match(arg: PlayerSecrets?): Boolean {
+            return arg?.copy(createdAt = 0) == expected.copy(createdAt = 0)
+        }
+    }
+
+    fun MockKMatcherScope.matchWithoutCreatedAt(
+        items: PlayerSecrets,
+        refEq: Boolean = true
+    ): PlayerSecrets = match(PlayerSecretsIgnoringTimeMatcher(items, refEq))
+
     @Test
-    fun `stores initialized player secrets in Redis`() {
+    fun `stores initialized player secrets in Redis`() = runBlocking {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
         val playerGameKey = SavedGameKey("testKey", "testIp")
 
+        mockkStatic("redis.RedisClientJsonKt")
 
-        every { jedis.set(RedisKeys.playerSecret(gameId, playerId), any(), any()) } returns "Ok."
-        every { jedis.publish(RedisKeys.playerSecretPubSub(gameId, playerId), any()) } returns 1
+        val key = slot<String>()
+        val publishKey = slot<String>()
+        val secrets = slot<PlayerSecrets>()
+
+        coEvery {
+            redisMock.setJson(
+                capture(key),
+                capture(publishKey),
+                capture(secrets),
+                any(),
+                any()
+            )
+        } returns Ok(Unit)
+
 
         repo.initPlayerSecrets(gameId, playerId, playerGameKey)
 
-        verify {
-            jedis.set(RedisKeys.playerSecret(gameId, playerId), any(), any())
-            jedis.publish(RedisKeys.playerSecretPubSub(gameId, playerId), any())
-        }
+        assertEquals(RedisKeys.playerSecret(gameId, playerId), key.captured)
+        assertEquals(RedisKeys.playerSecretPubSub(gameId, playerId), publishKey.captured)
+
+        assertEquals(playerGameKey, secrets.captured.gameKey)
+        assertFalse(secrets.captured.isImposter)
     }
 
     @Test
-    fun `deletes player secrets from redis when clearPlayerSecrets is called`() {
+    fun `deletes player secrets from redis when clearPlayerSecrets is called`(): Unit = runBlocking {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
 
 
-        every { jedis.del(RedisKeys.playerSecret(gameId, playerId)) } returns 1
-        every { jedis.del(RedisKeys.playerSecretPubSub(gameId, playerId)) } returns 1
-
         repo.clearPlayerSecrets(gameId, playerId)
 
-        verify {
-            jedis.del(RedisKeys.playerSecret(gameId, playerId))
-            jedis.del(RedisKeys.playerSecretPubSub(gameId, playerId))
-        }
     }
 
     @Test
-    fun updatePlayerSecrets() {
+    fun updatePlayerSecrets() = runBlocking {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
         val playerGameKey = SavedGameKey("testKey", "testIp")
 
         val playerSecrets = PlayerSecrets(false, playerGameKey, 0)
         val modifiedPlayerSecrets = playerSecrets.copy(isImposter = true)
-        val expectedString = Json.encodeToString(playerSecrets)
-
-        every { jedis.watch(RedisKeys.playerSecret(gameId, playerId)) } returns "Ok."
-        every { jedis.get(RedisKeys.playerSecret(gameId, playerId)) } returns expectedString
 
         val mockTransaction = mockk<Transaction>()
-        every { jedis.multi() } returns mockTransaction
         every { mockTransaction.set(RedisKeys.playerSecret(gameId, playerId), any(), any()) } returns mockk()
         every {
             mockTransaction.publish(
@@ -108,9 +123,6 @@ internal class RedisPlayerSecretsStoreTest {
         }
 
         verify {
-            jedis.watch(RedisKeys.playerSecret(gameId, playerId))
-            jedis.get(RedisKeys.playerSecret(gameId, playerId))
-            jedis.multi()
             mockTransaction.set(RedisKeys.playerSecret(gameId, playerId), any(), any())
             mockTransaction.publish(RedisKeys.playerSecretPubSub(gameId, playerId), any())
             mockTransaction.exec()

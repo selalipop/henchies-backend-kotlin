@@ -1,25 +1,24 @@
 package repository.redis
 
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.andThen
 import kotlinx.coroutines.flow.Flow
 import models.GameState
 import models.id.GameId
-import redis.clients.jedis.Jedis
+import redis.RedisClient
 import repository.GameStateStore
-import util.jedis.JedisFlowPubSub
 import kotlin.time.hours
 
 class RedisGameStateStore(
-    jedis: Jedis,
-    jedisPubSub: JedisFlowPubSub
-) : RedisGenericStore<GameState>(jedis, jedisPubSub), GameStateStore {
+    redis: RedisClient,
+) : RedisGenericStore<GameState>(redis), GameStateStore {
     companion object {
         val GameStateTtl = 6.hours
     }
 
-    override fun updateGameState(
-        gameId: GameId,
-        stateUpdate: (GameState) -> GameState
+     override suspend fun updateGameState(
+         gameId: GameId,
+         stateUpdate: suspend (GameState) -> GameState
     ): Result<Unit, Error> {
         return update<GameState>(
             RedisKeys.gameState(gameId),
@@ -31,7 +30,7 @@ class RedisGameStateStore(
         }
     }
 
-    override fun setGameState(gameId: GameId, state: GameState): Result<Unit, Error> {
+    override suspend fun setGameState(gameId: GameId, state: GameState): Result<Unit, Error> {
         return set(
             RedisKeys.gameState(gameId),
             RedisKeys.gameStatePubSub(gameId),
@@ -40,18 +39,16 @@ class RedisGameStateStore(
         )
     }
 
-    override fun observeGameState(gameId: GameId): Result<Flow<GameState>, Error> {
+    override suspend fun observeGameState(gameId: GameId): Result<Flow<GameState>, Error> {
         return observe(
             RedisKeys.gameState(gameId),
             RedisKeys.gameStatePubSub(gameId)
         )
     }
 
-    override fun clearGameState(gameId: GameId): Result<Unit, Error> {
-        return clear(
-            RedisKeys.gameState(gameId),
-            RedisKeys.gameStatePubSub(gameId)
-        )
+    override suspend  fun clearGameState(gameId: GameId): Result<Unit, Error> {
+        return redis.clear(RedisKeys.gameState(gameId))
+            .andThen { redis.clear(RedisKeys.gameStatePubSub(gameId)) }
     }
 
 }

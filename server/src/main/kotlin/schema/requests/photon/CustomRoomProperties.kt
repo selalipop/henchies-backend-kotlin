@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class CustomRoomProperties(
     @SerialName("ImposterCount")
     val imposterCount: Int = 0,
+
     @SerialName("ServerCreatedRoom")
     val serverCreatedRoom: Boolean = false,
 )

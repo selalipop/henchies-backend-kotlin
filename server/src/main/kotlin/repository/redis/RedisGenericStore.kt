@@ -2,88 +2,78 @@ package repository.redis
 
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.mapError
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flattenMerge
 import kotlinx.coroutines.flow.flowOf
-import redis.clients.jedis.Jedis
+import redis.*
 import util.error.err
-import util.jedis.JedisFlowPubSub
-import util.jedis.getJson
-import util.jedis.setJson
-import util.jedis.updateJson
 import kotlin.time.Duration
 
 abstract class RedisGenericStore<T>(
-    val jedis: Jedis,
-    val jedisPubSub: JedisFlowPubSub
+    val redis: RedisClient
 ) {
 
-    inline fun <reified T> update(
+    suspend inline fun <reified T> update(
         redisKey: String,
         redisPubSubKey: String,
         redisTtl: Duration,
-        stateUpdate: (T) -> T
+        noinline  stateUpdate: suspend (T) -> T
     ): Result<Unit, Error> {
 
-        val (_, error) = jedis.updateJson(
+        return redis.updateJson(
             redisKey,
             redisPubSubKey,
             redisTtl,
             stateUpdate
-        )
-
-        if (error != null) {
-            return err(
-                if (error) {
-                    "Could not find item with given ID"
-                } else {
-                    "Internal Redis util.ktor.error"
-                }
-            )
-        }
-
-        return Ok(Unit)
+        ).mapError(this::simplifyRedisErr)
     }
 
-    inline fun <reified T> set(
+    suspend inline fun <reified T> set(
         redisKey: String,
         redisPubSubKey: String,
         redisTtl: Duration,
         newValue: T
     ): Result<Unit, Error> {
-        val (_, error) = jedis.setJson(
+        return redis.setJson(
             redisKey,
             redisPubSubKey,
             newValue,
             redisTtl
-        )
-        if (error != null) {
-            return err("Internal Redis util.ktor.error")
-        }
-        return Ok(Unit)
+        ).mapError(this::simplifyRedisErr)
     }
 
-    inline fun <reified T : Any> observe(
+    fun simplifyRedisErr(it: RedisError): Error {
+        return if (it.isMissingKey) {
+            Error("Could not find item with given ID")
+        } else {
+            Error("Internal redis error", it)
+        }
+    }
+
+    suspend inline fun <reified T : Any> observe(
         redisKey: String,
         redisPubSubKey: String
     ): Result<Flow<T>, Error> {
 
-        val (currentValue, _) = jedis.getJson<T>(redisKey)
-        val mappedFlow = flowOf(
+        val (currentValue, err) = redis.getJson<T>(redisKey)
+        if (err != null) {
+            return err(simplifyRedisErr(err))
+        }
+
+        val flow = flowOf(
             flowOf(currentValue),
-            jedisPubSub.subscribeJsonFlow<T>(redisPubSubKey)
+            redis.subscribeJsonChannel(redisPubSubKey)
         )
             .flattenMerge()
             .filterNotNull()
-
-        return Ok(mappedFlow)
+        return Ok(flow)
     }
 
-    fun clear(redisKey: String, redisPubSubKey: String): Result<Unit, Error> {
-        jedis.del(redisKey)
-        jedis.del(redisPubSubKey)
-        return Ok(Unit)
+    suspend fun clear(redisKey: String): Result<Unit, Error> {
+        return redis.clear(redisKey)
     }
 
 }
+

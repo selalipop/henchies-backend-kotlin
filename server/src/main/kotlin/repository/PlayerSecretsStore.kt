@@ -8,24 +8,24 @@ import models.id.GameId
 import models.id.PlayerId
 
 interface PlayerSecretsStore {
-    fun updatePlayerSecrets(
+    suspend fun updatePlayerSecrets(
         gameId: GameId,
         playerId: PlayerId,
-        update: (PlayerSecrets) -> PlayerSecrets
+        secretUpdate: suspend (PlayerSecrets) -> PlayerSecrets
     ): Result<Unit, Error>
 
-    fun setPlayerSecrets(
+    suspend fun setPlayerSecrets(
         gameId: GameId,
         playerId: PlayerId,
         secrets: PlayerSecrets
     ): Result<Unit, Error>
 
 
-    fun initPlayerSecrets(gameId: GameId, playerId: PlayerId, key: SavedGameKey) =
+    suspend fun initPlayerSecrets(gameId: GameId, playerId: PlayerId, key: SavedGameKey) =
         setPlayerSecrets(
             gameId, playerId, PlayerSecrets(false, key)
         )
 
-    fun clearPlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Unit, Error>
-    fun observePlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Flow<PlayerSecrets>, Error>
+    suspend fun clearPlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Unit, Error>
+    suspend fun observePlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Flow<PlayerSecrets>, Error>
 }

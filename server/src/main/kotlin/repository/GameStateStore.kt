@@ -7,25 +7,25 @@ import models.GameState
 import models.id.GameId
 
 interface GameStateStore {
-    fun updateGameState(
+    suspend fun updateGameState(
         gameId: GameId,
-        update: (GameState) -> GameState
+        stateUpdate: suspend (GameState) -> GameState
     ): Result<Unit, Error>
 
-    fun setGameState(
+    suspend fun setGameState(
         gameId: GameId,
         state: GameState
     ): Result<Unit, Error>
 
-    fun observeGameState(
+    suspend fun observeGameState(
         gameId: GameId
     ): Result<Flow<GameState>, Error>
 
-    fun clearGameState(
+    suspend fun clearGameState(
         gameId: GameId
     ): Result<Unit, Error>
 
-    fun initGameState(gameId: GameId, startingPlayerCount: Int, imposterCount: Int) =
+    suspend fun initGameState(gameId: GameId, startingPlayerCount: Int, imposterCount: Int) =
         setGameState(
             gameId, GameState(
                 startingPlayerCount,

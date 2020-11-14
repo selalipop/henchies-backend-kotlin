@@ -11,10 +11,10 @@ interface GameKeyStore {
      * @return Returns a new game key if this is the first request for this player, or an existing one if one was already
      * created by the same client IP address
      */
-    fun createOrRetrieveGameKey(gameId: GameId, playerId: PlayerId, clientIp: String): Result<SavedGameKey, Error>
+    suspend fun createOrRetrieveGameKey(gameId: GameId, playerId: PlayerId, clientIp: String): Result<SavedGameKey, Error>
 
     /***
      * @return Returns true if the game key passed matches the existing Game Key
      */
-    fun verifyGameKey(gameId: GameId, playerId: PlayerId, key: GameKey): Result<Boolean, Error>
+    suspend fun verifyGameKey(gameId: GameId, playerId: PlayerId, expected: GameKey): Result<Boolean, Error>
 }

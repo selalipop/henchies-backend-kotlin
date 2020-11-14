@@ -38,9 +38,10 @@ class UpdateController(
         val gameKey = GameKey(params.getOrFail("gameKey"))
         val playerId = PlayerId(params.getOrFail("playerId"))
 
-        val (clientUpdates, error) = getClientUpdates(gameId, playerId, gameKey)
-        if (error != null || clientUpdates == null) {
-            throw Error("Failed to connect to Game State Updates", error)
+        val (clientUpdates, updateErr) = getClientUpdates(gameId, playerId, gameKey)
+
+        if (updateErr != null || clientUpdates == null) {
+            throw Error("Failed to connect to Game State Updates", updateErr)
         }
 
         clientUpdates.onCompletion { err ->
@@ -65,7 +66,7 @@ class UpdateController(
         logger.trace { "Closed WebSocket ${hashCode()}" }
     }
 
-    private fun getClientUpdates(
+    private suspend fun getClientUpdates(
         gameId: GameId,
         playerId: PlayerId,
         gameKey: GameKey
