@@ -2,6 +2,7 @@ package controllers.photon
 
 import io.ktor.application.*
 import io.ktor.request.*
+import io.ktor.response.*
 import repository.GameStateStore
 import schema.requests.photon.CreateOptions
 import schema.requests.photon.RoomCreatedRequest
@@ -27,6 +28,8 @@ class RoomCreatedController(private val gameStateStore: GameStateStore) {
         }
 
         processPlayerJoined(request.gameId, request.playerId, gameStateStore)
+
+        ctx.respondText("Ok.")
     }
 
     private fun getImposterCountForGame(createOptions: CreateOptions): Int {

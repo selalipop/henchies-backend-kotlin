@@ -1,5 +1,6 @@
 package repository.redis
 
+import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.andThen
 import kotlinx.coroutines.flow.Flow
@@ -7,6 +8,7 @@ import models.GameState
 import models.id.GameId
 import redis.RedisClient
 import repository.GameStateStore
+import util.error.err
 import kotlin.time.hours
 
 class RedisGameStateStore(
@@ -47,8 +49,14 @@ class RedisGameStateStore(
     }
 
     override suspend  fun clearGameState(gameId: GameId): Result<Unit, Error> {
-        return redis.clear(RedisKeys.gameState(gameId))
+        val (_, redisError) = redis.clear(RedisKeys.gameState(gameId))
             .andThen { redis.clear(RedisKeys.gameStatePubSub(gameId)) }
+
+        return if (redisError != null && !redisError.isMissingKey) {
+            err(redisError)
+        } else {
+            Ok(Unit)
+        }
     }
 
 }

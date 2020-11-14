@@ -81,6 +81,7 @@ class Server : KoinComponent {
 
     private fun Application.setupRouting() {
         routing {
+
             get("/") {
                 logger.info { "Hello Henchies!" }
                 call.respondText("Hello Henchies!")
@@ -95,6 +96,10 @@ class Server : KoinComponent {
 
             webSocket("/updates") { forRoute(updateController::getUpdates) }
         }
+    }
+
+     suspend  fun test(ctx: ApplicationCall) {
+        ctx.respondText("hello world")
     }
 
     private fun getPlayerIdForCall(it: ApplicationCall) =

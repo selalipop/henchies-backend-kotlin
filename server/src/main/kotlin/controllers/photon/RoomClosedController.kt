@@ -2,6 +2,7 @@ package controllers.photon
 
 import io.ktor.application.*
 import io.ktor.request.*
+import io.ktor.response.*
 import kotlinx.coroutines.flow.first
 import repository.GameStateStore
 import repository.PlayerSecretsStore
@@ -23,5 +24,6 @@ class RoomClosedController(
         stateUpdates.first().players.forEach {
             playerSecretsStore.clearPlayerSecrets(request.gameId, it.id)
         }
+        ctx.respondText("Ok.")
     }
 }

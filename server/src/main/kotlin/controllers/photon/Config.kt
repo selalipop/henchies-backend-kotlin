@@ -1,4 +1,4 @@
 package controllers.photon
 
-const val WaitingForLeavingPlayerDelay = 5000L
+const val WaitingForLeavingPlayerDelay = 500L
 const val GameLobbyId = "GameLobby"
