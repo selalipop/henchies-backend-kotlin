@@ -63,6 +63,7 @@ class Server : KoinComponent {
 
         install(StatusPages) {
             exception<Throwable> { cause ->
+                logger.error(cause) { "Internal Server Error" }
                 call.respond(
                     HttpStatusCode.InternalServerError,
                     "Internal Server Error: ${cause.message}"
@@ -98,7 +99,7 @@ class Server : KoinComponent {
         }
     }
 
-     suspend  fun test(ctx: ApplicationCall) {
+    suspend fun test(ctx: ApplicationCall) {
         ctx.respondText("hello world")
     }
 

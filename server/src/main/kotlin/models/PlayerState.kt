@@ -4,16 +4,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import models.id.PlayerId
 
+fun playerState(id: PlayerId, color: PlayerColor) = PlayerState(id.value, color)
 @Serializable
 data class PlayerState(
     @SerialName("id")
     val rawId: String,
     @SerialName("color")
-    val color: PlayerColor,
-    @SerialName("isImposter")
-    val isImposter: Boolean,
+    val color: PlayerColor
 ) {
-    constructor(id: PlayerId, color: PlayerColor) : this(id.value, color, false)
 
     val id by lazy { PlayerId(rawId) }
 }

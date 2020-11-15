@@ -1,17 +1,19 @@
 package controllers.photon
 
 import kotlinx.coroutines.delay
-import models.GamePhase
-import models.GameState
-import models.PlayerColor
+import models.*
 import models.PlayerState
 import models.id.GameId
 import models.id.PlayerId
 import repository.GameStateStore
+import repository.PlayerSecretsStore
 import util.logger
 
 
-suspend fun processPlayerJoined(gameId: GameId, playerId: PlayerId, gameStateStore: GameStateStore) {
+suspend fun processPlayerJoined(
+    gameId: GameId, playerId: PlayerId,
+    secretsStore: PlayerSecretsStore, gameStateStore: GameStateStore
+) {
     gameStateStore.updateGameState(gameId) { oldState ->
         if (oldState.players.any { it.id == playerId }) {
             logger.info { "received player joined event but player was already in game, player:$playerId game: $gameId " }
@@ -22,7 +24,7 @@ suspend fun processPlayerJoined(gameId: GameId, playerId: PlayerId, gameStateSto
             oldState.players.none { it.color == color }
         }
 
-        val newState = oldState.copy(players = oldState.players + PlayerState(playerId, unusedColor))
+        val newState = oldState.copy(players = oldState.players + playerState(playerId, unusedColor))
 
         if (newState.players.size < oldState.maxPlayers) {
             return@updateGameState newState
@@ -33,18 +35,22 @@ suspend fun processPlayerJoined(gameId: GameId, playerId: PlayerId, gameStateSto
         }
 
         logger.info { "starting game $gameId after player $playerId joined" }
-        return@updateGameState startGame(newState)
+        return@updateGameState startGame(gameId, newState, secretsStore)
     }
 }
 
 
-private suspend fun startGame(state: GameState): GameState {
+private suspend fun startGame(gameId: GameId, state: GameState, playerSecretsStore: PlayerSecretsStore): GameState {
     delay(WaitingForLeavingPlayerDelay)
 
-    //Shuffled twice to avoid giving away imposters based on order
-    val updatedPlayers = state.players.shuffled().mapIndexed { index, player ->
-        player.copy(isImposter = index < state.imposterCount)
-    }.shuffled()
+    //Update imposters
+    state.players.shuffled().forEachIndexed { index, player ->
+        if (index < state.imposterCount) {
+            playerSecretsStore.updatePlayerSecrets(gameId, player.id) { secrets ->
+                secrets.copy(isImposter = true)
+            }
+        }
+    }
 
-    return state.copy(players = updatedPlayers, phase = GamePhase.Started)
+    return state.copy(phase = GamePhase.Started)
 }

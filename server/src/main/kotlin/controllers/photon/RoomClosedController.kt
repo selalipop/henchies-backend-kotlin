@@ -14,7 +14,6 @@ class RoomClosedController(
 ) {
     suspend fun roomClosed(ctx: ApplicationCall) {
         val request = ctx.receive<RoomClosedRequest>()
-        gameStateStore.clearGameState(request.gameId)
 
         val (stateUpdates, error) = gameStateStore.observeGameState(request.gameId)
         if (error != null || stateUpdates == null) {
@@ -24,6 +23,8 @@ class RoomClosedController(
         stateUpdates.first().players.forEach {
             playerSecretsStore.clearPlayerSecrets(request.gameId, it.id)
         }
+
+        gameStateStore.clearGameState(request.gameId)
         ctx.respondText("Ok.")
     }
 }
