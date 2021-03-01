@@ -10,6 +10,7 @@ import redis.jedis.ttlFromDuration
 import util.JSON
 import util.error.err
 import util.error.resultOf
+import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 import kotlin.time.Duration
@@ -19,7 +20,7 @@ suspend fun RedisClient.setJson(
     key: String,
     publishChannel: String?,
     value: Any?,
-    type: KType,
+    type: KClass<Any>,
     setParams: SetParams
 ): Result<Unit, RedisError> {
 
@@ -70,7 +71,19 @@ suspend inline fun <reified T> RedisClient.setJson(
 ): Result<Unit, RedisError> {
     return setJson(key, publishChannel, value, typeOf<T>(), setParams)
 }
+suspend inline fun RedisClient.setJson(
+    key: String,
+    publishChannel: String?,
+    value: Any?,
+    type: KType,
+    setParams: SetParams,
+): Result<Unit, RedisError> {
 
+    val serializer = JSON.serializersModule.serializer(type)
+    val encoded = JSON.encodeToString(serializer, value)
+    return set(key, publishChannel, encoded, setParams)
+
+}
 suspend inline fun <reified T> RedisClient.setJson(
     key: String,
     publishChannel: String?,

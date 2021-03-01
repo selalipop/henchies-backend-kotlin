@@ -4,13 +4,19 @@ import io.ktor.application.*
 import io.ktor.request.*
 import io.ktor.response.*
 import repository.GameStateStore
+import repository.PlayerSecretsStore
+import schema.requests.photon.AllowCreateReply
 import schema.requests.photon.CreateOptions
+import schema.requests.photon.OkReply
 import schema.requests.photon.RoomCreatedRequest
 import util.logger
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-class RoomCreatedController(private val gameStateStore: GameStateStore) {
+class RoomCreatedController(
+    private val gameStateStore: GameStateStore,
+    private val secretsStore: PlayerSecretsStore
+) {
     suspend fun roomCreated(ctx: ApplicationCall) {
         val request = ctx.receive<RoomCreatedRequest>()
         logger.info { "Room created $request" }
@@ -27,9 +33,9 @@ class RoomCreatedController(private val gameStateStore: GameStateStore) {
             throw Error("Failed to initialize game state", error)
         }
 
-        processPlayerJoined(request.gameId, request.playerId, gameStateStore)
+        processPlayerJoined(request.gameId, request.playerId, gameStateStore, secretsStore)
 
-        ctx.respondText("Ok.")
+        ctx.respondPhoton(AllowCreateReply)
     }
 
     private fun getImposterCountForGame(createOptions: CreateOptions): Int {

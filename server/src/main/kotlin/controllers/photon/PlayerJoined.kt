@@ -1,18 +1,22 @@
 package controllers.photon
 
 import kotlinx.coroutines.delay
-import models.*
-import models.PlayerState
+import models.GamePhase
+import models.GameState
+import models.PlayerColor
 import models.id.GameId
 import models.id.PlayerId
+import models.playerState
 import repository.GameStateStore
 import repository.PlayerSecretsStore
 import util.logger
 
 
 suspend fun processPlayerJoined(
-    gameId: GameId, playerId: PlayerId,
-    secretsStore: PlayerSecretsStore, gameStateStore: GameStateStore
+    gameId: GameId,
+    playerId: PlayerId,
+    gameStateStore: GameStateStore,
+    secretsStore: PlayerSecretsStore,
 ) {
     gameStateStore.updateGameState(gameId) { oldState ->
         if (oldState.players.any { it.id == playerId }) {

@@ -20,6 +20,7 @@ import org.koin.core.KoinComponent
 import org.koin.core.inject
 import repository.GameStateStore
 import util.JSON
+import util.ktor.forPhotonRoute
 import util.ktor.forRoute
 import util.logger
 import kotlin.time.seconds
@@ -49,7 +50,7 @@ class Server : KoinComponent {
     }
 
     private fun Application.installExtensions() {
-        install(ForwardedHeaderSupport)
+        install(XForwardedHeaderSupport)
         install(ContentNegotiation) {
             json(JSON)
         }
@@ -90,10 +91,10 @@ class Server : KoinComponent {
 
             get("/player/{playerId}/key", forRoute(gameKeyController::getPlayerGameKey))
 
-            post("/photonwebhooks/playerjoined", forRoute(playerJoinedController::playerJoined))
-            post("/photonwebhooks/playerleft", forRoute(playerLeftController::playerLeft))
-            post("/photonwebhooks/roomcreated", forRoute(roomCreatedController::roomCreated))
-            post("/photonwebhooks/roomclosed", forRoute(roomClosedController::roomClosed))
+            post("/photonwebhooks/playerjoined", forPhotonRoute(playerJoinedController::playerJoined))
+            post("/photonwebhooks/playerleft", forPhotonRoute(playerLeftController::playerLeft))
+            post("/photonwebhooks/roomcreated", forPhotonRoute(roomCreatedController::roomCreated))
+            post("/photonwebhooks/roomclosed", forPhotonRoute(roomClosedController::roomClosed))
 
             webSocket("/updates") { forRoute(updateController::getUpdates) }
         }
@@ -105,6 +106,5 @@ class Server : KoinComponent {
 
     private fun getPlayerIdForCall(it: ApplicationCall) =
         it.request.header("henchies-player-id") ?: it.parameters["playerId"] ?: it.parameters["playerID"]
-        ?: "no-player-id"
 
 }

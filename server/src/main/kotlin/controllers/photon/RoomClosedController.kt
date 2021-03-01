@@ -6,6 +6,7 @@ import io.ktor.response.*
 import kotlinx.coroutines.flow.first
 import repository.GameStateStore
 import repository.PlayerSecretsStore
+import schema.requests.photon.OkReply
 import schema.requests.photon.RoomClosedRequest
 
 class RoomClosedController(
@@ -25,6 +26,6 @@ class RoomClosedController(
         }
 
         gameStateStore.clearGameState(request.gameId)
-        ctx.respondText("Ok.")
+        ctx.respondPhoton(OkReply)
     }
 }

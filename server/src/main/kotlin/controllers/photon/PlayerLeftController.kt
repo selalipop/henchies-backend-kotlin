@@ -5,6 +5,7 @@ import io.ktor.request.*
 import io.ktor.response.*
 import models.byId
 import repository.GameStateStore
+import schema.requests.photon.OkReply
 import schema.requests.photon.PlayerLeftRequest
 
 
@@ -24,6 +25,6 @@ class PlayerLeftController(
 
             return@updateGameState state
         }
-        ctx.respondText("Ok.")
+        ctx.respondPhoton(OkReply)
     }
 }
