@@ -54,7 +54,23 @@ class Server : KoinComponent {
         install(ContentNegotiation) {
             json(JSON)
         }
+        install(CORS) {
+            method(HttpMethod.Options)
+            method(HttpMethod.Get)
+            method(HttpMethod.Post)
+            allowNonSimpleContentTypes = true
+            allowSameOrigin = true
+            header(HttpHeaders.XForwardedProto)
+            header(HttpHeaders.Origin)
+            header(HttpHeaders.Allow)
+            header(HttpHeaders.AccessControlAllowOrigin)
+            header(HttpHeaders.AccessControlAllowHeaders)
+            header(HttpHeaders.ContentType)
+            header(HttpHeaders.AuthenticationInfo)
 
+            //TODO: Enforce reduced list of hosts
+            anyHost()
+        }
         install(CallLogging) {
             mdc("playerId") { getPlayerIdForCall(it) }
             mdc("method") { it.request.httpMethod.value }
