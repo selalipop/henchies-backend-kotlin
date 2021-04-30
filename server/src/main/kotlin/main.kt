@@ -1,3 +1,4 @@
+import controllers.GameItemController
 import controllers.GameKeyController
 import controllers.UpdateController
 import controllers.photon.PlayerJoinedController
@@ -33,7 +34,7 @@ fun main() = runBlocking {
         ?: DefaultRedisUrl.also { logger.warn { "Using Redis $DefaultRedisUrl due to missing HENCHIES_REDISCONNECTURL" } }
 
     val port = System.getenv("PORT")?.toInt()
-        ?: DefaultPort.also { logger.warn { "Using port $DefaultPort due to missing PORT" } }
+        ?: DefaultPort.also { logger.warn { "Server binding to port $DefaultPort due to missing PORT" } }
 
     loadKoinModules(listOf(appModule(redisUrl)))
 
@@ -48,6 +49,7 @@ fun appModule(redisUrl: String) = module {
     singleBy<RedisClient, JedisClient>()
 
     single<GameKeyController>()
+    single<GameItemController>()
     single<UpdateController>()
 
 

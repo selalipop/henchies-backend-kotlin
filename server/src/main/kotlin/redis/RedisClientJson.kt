@@ -16,18 +16,6 @@ import kotlin.reflect.typeOf
 import kotlin.time.Duration
 
 
-suspend fun RedisClient.setJson(
-    key: String,
-    publishChannel: String?,
-    value: Any?,
-    type: KClass<Any>,
-    setParams: SetParams
-): Result<Unit, RedisError> {
-
-    val serializer = JSON.serializersModule.serializer(type)
-    val encoded = JSON.encodeToString(serializer, value)
-    return set(key, publishChannel, encoded, setParams)
-}
 
 inline fun <reified T> RedisClient.subscribeJsonChannel(channelName: String) =
     subscribeChannel(channelName).map { JSON.decodeFromString<T>(it) }

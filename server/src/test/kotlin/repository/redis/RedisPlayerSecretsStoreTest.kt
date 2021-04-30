@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test
 import redis.RedisClient
 import redis.clients.jedis.Transaction
 import redis.setJson
+import util.error.Ok
 
 internal class RedisPlayerSecretsStoreTest {
 
@@ -76,12 +77,11 @@ internal class RedisPlayerSecretsStoreTest {
         } returns Ok(Unit)
 
 
-        repo.initPlayerSecrets(gameId, playerId, playerGameKey)
+        repo.initPlayerSecrets(gameId, playerId)
 
         assertEquals(RedisKeys.playerSecret(gameId, playerId), key.captured)
         assertEquals(RedisKeys.playerSecretPubSub(gameId, playerId), publishKey.captured)
 
-        assertEquals(playerGameKey, secrets.captured.gameKey)
         assertFalse(secrets.captured.isImposter)
     }
 
@@ -89,41 +89,43 @@ internal class RedisPlayerSecretsStoreTest {
     fun `deletes player secrets from redis when clearPlayerSecrets is called`(): Unit = runBlocking {
         val gameId = GameId("gameId")
         val playerId = PlayerId("playerId")
-
+        coEvery {
+            redisMock.clear(any())
+        } returns Ok
 
         repo.clearPlayerSecrets(gameId, playerId)
-
+        coVerify {
+            redisMock.clear(RedisKeys.playerSecret(gameId, playerId))
+        }
     }
 
     @Test
     fun updatePlayerSecrets() = runBlocking {
-        val gameId = GameId("gameId")
-        val playerId = PlayerId("playerId")
+        val gameId = GameId("some-game-id")
+        val playerId = PlayerId("some-player-id")
         val playerGameKey = SavedGameKey("testKey", "testIp")
 
-        val playerSecrets = PlayerSecrets(false, playerGameKey, 0)
+        val playerSecrets = PlayerSecrets(false, 0)
         val modifiedPlayerSecrets = playerSecrets.copy(isImposter = true)
 
-        val mockTransaction = mockk<Transaction>()
-        every { mockTransaction.set(RedisKeys.playerSecret(gameId, playerId), any(), any()) } returns mockk()
-        every {
-            mockTransaction.publish(
-                RedisKeys.playerSecretPubSub(gameId, playerId),
+        coEvery {
+            redisMock.update( any(), any(),
+                any(),
                 any()
             )
-        } returns mockk()
-
-        every { mockTransaction.exec() } returns mockk()
-
+        }
         repo.updatePlayerSecrets(gameId, playerId) {
             assertEquals(it, playerSecrets)
             modifiedPlayerSecrets
         }
 
-        verify {
-            mockTransaction.set(RedisKeys.playerSecret(gameId, playerId), any(), any())
-            mockTransaction.publish(RedisKeys.playerSecretPubSub(gameId, playerId), any())
-            mockTransaction.exec()
+        coVerify {
+            redisMock.update(
+                RedisKeys.playerSecret(gameId, playerId),
+                RedisKeys.playerSecretPubSub(gameId, playerId),
+                any(),
+                any()
+            )
         }
     }
 

@@ -8,6 +8,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
+import models.ClientUpdate
 import models.GameKey
 import models.PingUpdate
 import models.id.GameId
@@ -21,8 +22,6 @@ import util.logger
 import kotlin.time.seconds
 
 
-private val pingFrame = Frame.Text(JSON.encodeToString(PingUpdate))
-
 class UpdateController(
     private val gameState: GameStateStore,
     private val playerSecrets: PlayerSecretsStore,
@@ -32,25 +31,27 @@ class UpdateController(
     suspend fun getUpdates(ctx: DefaultWebSocketServerSession) {
         logger.trace { "Created WebSocket ${hashCode()}" }
 
-        val params = ctx.call.request.queryParameters
+        val params = ctx.call.parameters
 
         val gameId = GameId(params.getOrFail("gameId"))
-        val gameKey = GameKey(params.getOrFail("gameKey"))
+        val gameKey = GameKey(params.getOrFail("playerKey"))
         val playerId = PlayerId(params.getOrFail("playerId"))
 
         val (clientUpdates, updateErr) = getClientUpdates(gameId, playerId, gameKey)
 
         if (updateErr != null || clientUpdates == null) {
+            logger.error(updateErr) { "Failed to connect to Game State Updates" }
             throw Error("Failed to connect to Game State Updates", updateErr)
         }
 
         clientUpdates.onCompletion { err ->
+            logger.error(err) { "Terminated Client Updates" }
             ctx.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, "Terminated updates: $err"))
         }
 
         val pingFlow = ticker(10.seconds.toLongMilliseconds())
             .consumeAsFlow()
-            .map { pingFrame }
+            .map { PingUpdate }
 
         flowOf(
             clientUpdates,
@@ -59,7 +60,9 @@ class UpdateController(
             .flattenMerge()
             .takeWhile { !ctx.outgoing.isClosedForSend }
             .collect {
-                ctx.outgoing.offer(it)
+                val encodedValue = JSON.encodeToString(it)
+                logger.info("Sending value '$encodedValue' to player '$playerId'")
+                ctx.outgoing.offer(Frame.Text(encodedValue))
             }
 
 
@@ -70,7 +73,7 @@ class UpdateController(
         gameId: GameId,
         playerId: PlayerId,
         gameKey: GameKey
-    ): Result<Flow<Frame.Text>, Error> {
+    ): Result<Flow<ClientUpdate>, Error> {
         val (isValidKey, gameKeyErr) = gameKeyStore.verifyGameKey(gameId, playerId, gameKey)
         if (gameKeyErr != null || isValidKey != true) {
             return err("Invalid player key", gameKeyErr)
@@ -86,14 +89,13 @@ class UpdateController(
             return err("Failed to subscribe to player state", playerSecretError)
         }
 
-        return flowOf(
-            gameStateUpdates,
-            playerSecretUpdates
-        ).flattenMerge()
-            .map { JSON.encodeToString(it.toUpdate()) }
-            .filterNotNull()
-            .map { Frame.Text(it) }
-            .let { Ok(it) }
+        return Ok(
+            flowOf(
+                gameStateUpdates,
+                playerSecretUpdates
+            ).flattenMerge()
+                .map { it.toUpdate() }
+        )
     }
 
 }

@@ -1,3 +1,4 @@
+import controllers.GameItemController
 import controllers.GameKeyController
 import controllers.UpdateController
 import controllers.photon.PlayerJoinedController
@@ -15,13 +16,14 @@ import io.ktor.serialization.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.websocket.*
-import models.id.GameId
 import org.koin.core.KoinComponent
 import org.koin.core.inject
 import repository.GameStateStore
+import schema.requests.photon.InternalErrorReply
 import util.JSON
 import util.ktor.forPhotonRoute
 import util.ktor.forRoute
+import util.ktor.forWsRoute
 import util.logger
 import kotlin.time.seconds
 import kotlin.time.toJavaDuration
@@ -29,6 +31,7 @@ import kotlin.time.toJavaDuration
 class Server : KoinComponent {
     private val gameStateStore: GameStateStore by inject()
     private val gameKeyController: GameKeyController by inject()
+    private val gameItemController: GameItemController by inject()
     private val updateController: UpdateController by inject()
 
     private val roomCreatedController: RoomCreatedController by inject()
@@ -38,10 +41,7 @@ class Server : KoinComponent {
     private val playerLeftController: PlayerLeftController by inject()
 
 
-    suspend fun serve(port: Int) {
-        val gameId = GameId("test")
-        gameStateStore.initGameState(gameId, 10, 10)
-
+    fun serve(port: Int) {
         val server = embeddedServer(Netty, port = port) {
             installExtensions()
             setupRouting()
@@ -65,10 +65,14 @@ class Server : KoinComponent {
         install(StatusPages) {
             exception<Throwable> { cause ->
                 logger.error(cause) { "Internal Server Error" }
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    "Internal Server Error: ${cause.message}"
-                )
+                if (call.request.uri.startsWith(photonWebhookRoot)) {
+                    call.respond(InternalErrorReply(cause))
+                } else {
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        "Internal Server Error: ${cause.message}"
+                    )
+                }
                 throw cause
             }
         }
@@ -81,6 +85,8 @@ class Server : KoinComponent {
     }
 
 
+    private var photonWebhookRoot = "/photonwebhooks"
+
     private fun Application.setupRouting() {
         routing {
 
@@ -91,12 +97,16 @@ class Server : KoinComponent {
 
             get("/player/{playerId}/key", forRoute(gameKeyController::getPlayerGameKey))
 
-            post("/photonwebhooks/playerjoined", forPhotonRoute(playerJoinedController::playerJoined))
-            post("/photonwebhooks/playerleft", forPhotonRoute(playerLeftController::playerLeft))
-            post("/photonwebhooks/roomcreated", forPhotonRoute(roomCreatedController::roomCreated))
-            post("/photonwebhooks/roomclosed", forPhotonRoute(roomClosedController::roomClosed))
+            post("/game/{gameId}/items", forRoute(gameItemController::createItem))
 
-            webSocket("/updates") { forRoute(updateController::getUpdates) }
+            get("/health", forRoute(gameKeyController::healthCheck))
+
+            post("$photonWebhookRoot/playerjoined", forPhotonRoute(playerJoinedController::playerJoined))
+            post("$photonWebhookRoot/playerleft", forPhotonRoute(playerLeftController::playerLeft))
+            post("$photonWebhookRoot/roomcreated", forPhotonRoute(roomCreatedController::roomCreated))
+            post("$photonWebhookRoot/roomclosed", forPhotonRoute(roomClosedController::roomClosed))
+
+            webSocket("/updates") { forWsRoute(updateController::getUpdates) }
         }
     }
 

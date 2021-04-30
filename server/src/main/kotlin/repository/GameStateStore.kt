@@ -31,6 +31,7 @@ interface GameStateStore {
                 startingPlayerCount,
                 imposterCount,
                 GamePhase.WaitingForPlayers,
+                emptyList(),
                 emptyList()
             )
         )

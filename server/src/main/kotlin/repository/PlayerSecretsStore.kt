@@ -21,9 +21,9 @@ interface PlayerSecretsStore {
     ): Result<Unit, Error>
 
 
-    suspend fun initPlayerSecrets(gameId: GameId, playerId: PlayerId, key: SavedGameKey) =
+    suspend fun initPlayerSecrets(gameId: GameId, playerId: PlayerId) =
         setPlayerSecrets(
-            gameId, playerId, PlayerSecrets(false, key)
+            gameId, playerId, PlayerSecrets(false)
         )
 
     suspend fun clearPlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Unit, Error>

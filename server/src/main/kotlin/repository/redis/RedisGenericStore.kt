@@ -46,7 +46,7 @@ abstract class RedisGenericStore<T>(
 
     fun simplifyRedisErr(it: RedisError): Error {
         return if (it.isMissingKey) {
-            Error("Could not find item with given ID")
+            Error("Could not find item with given ID: ", it)
         } else {
             Error("Internal redis error", it)
         }

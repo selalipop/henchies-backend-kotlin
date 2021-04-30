@@ -19,8 +19,11 @@ data class WebhookReply(
 }
 
 val OkReply = WebhookReply(ResultCode.Ok, null, "Ok")
-val AllowCreateReply = WebhookReply(ResultCode.Ok, "", "Ok")
+val AllowCreateReply = WebhookReply(ResultCode.Ok, "", "Room Create Allowed")
 fun InternalErrorReply(e: Throwable) =
     WebhookReply(ResultCode.InternalError, null, e.message)
 fun InternalErrorReply(err: String) =
     WebhookReply(ResultCode.InternalError, null, err)
+
+fun InvalidRoomParametersReply(err: String) =
+    WebhookReply(ResultCode.InvalidRoomParameters, null, err)

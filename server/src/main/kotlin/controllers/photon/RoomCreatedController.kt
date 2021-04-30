@@ -7,7 +7,6 @@ import repository.GameStateStore
 import repository.PlayerSecretsStore
 import schema.requests.photon.AllowCreateReply
 import schema.requests.photon.CreateOptions
-import schema.requests.photon.OkReply
 import schema.requests.photon.RoomCreatedRequest
 import util.logger
 import kotlin.math.ceil
@@ -24,11 +23,13 @@ class RoomCreatedController(
         val createOptions = request.createOptions
         if (createOptions.lobbyId != GameLobbyId) {
             logger.warn { "Ignoring room created outside of Game Lobby ${createOptions.lobbyId}}" }
-            return
+            return ctx.respondPhoton(AllowCreateReply)
         }
+
+
         val imposterCount = getImposterCountForGame(createOptions)
 
-        val (_, error) = gameStateStore.initGameState(request.gameId, createOptions.maxPlayers, imposterCount)
+        val (_, error) = gameStateStore.initGameState(request.gameId, getPlayerCountForGame(createOptions), imposterCount)
         if (error != null) {
             throw Error("Failed to initialize game state", error)
         }
@@ -37,12 +38,15 @@ class RoomCreatedController(
 
         ctx.respondPhoton(AllowCreateReply)
     }
-
+    private fun getPlayerCountForGame(createOptions: CreateOptions): Int {
+        return createOptions.maxPlayers ?: 6
+    }
     private fun getImposterCountForGame(createOptions: CreateOptions): Int {
-        var imposterCount = createOptions.customProps.imposterCount
+        var imposterCount = createOptions.customProps?.imposterCount ?: 1
         if (imposterCount < 1) {
-            //TODO: Get real imposter count
-            imposterCount = ceil(0.2f * createOptions.maxPlayers).roundToInt()
+
+            //TODO: Get real imposter count or return InvalidRoomParametersReply if not possible
+            imposterCount = ceil(0.2f * (createOptions.maxPlayers ?: 0)).roundToInt()
         }
         return imposterCount
     }

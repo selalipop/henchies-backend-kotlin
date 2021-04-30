@@ -12,7 +12,10 @@ import schema.responses.getGameKeyResponse
 class GameKeyController(
     private val gameKeyStore: GameKeyStore
 ) {
+    suspend fun healthCheck(ctx: ApplicationCall) {
 
+        ctx.respond("I'm good")
+    }
     suspend fun getPlayerGameKey(ctx: ApplicationCall) {
 
         val gameId = GameId(ctx.parameters.getOrFail("gameId"))

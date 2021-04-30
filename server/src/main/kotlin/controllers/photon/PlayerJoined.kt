@@ -1,12 +1,9 @@
 package controllers.photon
 
 import kotlinx.coroutines.delay
-import models.GamePhase
-import models.GameState
-import models.PlayerColor
+import models.*
 import models.id.GameId
 import models.id.PlayerId
-import models.playerState
 import repository.GameStateStore
 import repository.PlayerSecretsStore
 import util.logger
@@ -18,6 +15,8 @@ suspend fun processPlayerJoined(
     gameStateStore: GameStateStore,
     secretsStore: PlayerSecretsStore,
 ) {
+    secretsStore.setPlayerSecrets(gameId, playerId, EmptyPlayerSecrets)
+
     gameStateStore.updateGameState(gameId) { oldState ->
         if (oldState.players.any { it.id == playerId }) {
             logger.info { "received player joined event but player was already in game, player:$playerId game: $gameId " }

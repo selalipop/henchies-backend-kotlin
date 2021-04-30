@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import models.id.GameId
 import models.id.PlayerId
 
-
 @Serializable
 data class RoomCreatedRequest(
     @SerialName("CreateOptions")
@@ -24,7 +23,7 @@ data class RoomCreatedRequest(
     var rawGameId: String? = null,
 
     @SerialName("Type")
-    var type: String? = null,
+    var type: RoomCreateType? = null,
 
     @SerialName("ActorNr")
     var actorNr: Int? = null,
