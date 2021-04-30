@@ -14,7 +14,7 @@ class RedisPlayerSecretsStore(
     redis: RedisClient
 ) : RedisGenericStore<PlayerSecrets>(redis), PlayerSecretsStore {
     companion object {
-        val PlayerGameKeyTtl = 6.hours
+        val PlayerSecretsKeyTtl = 24.hours
     }
 
 
@@ -38,7 +38,7 @@ class RedisPlayerSecretsStore(
         return update<PlayerSecrets>(
             RedisKeys.playerSecret(gameId, playerId),
             RedisKeys.playerSecretPubSub(gameId, playerId),
-            PlayerGameKeyTtl
+            PlayerSecretsKeyTtl
         ) {
             //Ensure createdAt is updated when called
             secretUpdate(it).withUpdatedTime()
@@ -49,7 +49,7 @@ class RedisPlayerSecretsStore(
         return set(
             RedisKeys.playerSecret(gameId, playerId),
             RedisKeys.playerSecretPubSub(gameId, playerId),
-            PlayerGameKeyTtl, secrets
+            PlayerSecretsKeyTtl, secrets
         )
     }
 }

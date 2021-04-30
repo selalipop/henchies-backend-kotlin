@@ -27,7 +27,7 @@ class RedisGameKeyStore(
         val redisKey = RedisKeys.playerGameKey(gameId, playerId)
 
         val (_, setErr) = redis.setJson(
-            redisKey, null, gameKey, ttlFromDuration(RedisPlayerSecretsStore.PlayerGameKeyTtl).nx()
+            redisKey, null, gameKey, ttlFromDuration(RedisPlayerSecretsStore.PlayerSecretsKeyTtl).nx()
         )
 
         if (setErr != null && !setErr.isMissingKey) {

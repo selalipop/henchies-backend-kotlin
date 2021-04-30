@@ -15,7 +15,7 @@ class RedisGameStateStore(
     redis: RedisClient,
 ) : RedisGenericStore<GameState>(redis), GameStateStore {
     companion object {
-        val GameStateTtl = 6.hours
+        val GameStateTtl = 24.hours
     }
 
      override suspend fun updateGameState(
