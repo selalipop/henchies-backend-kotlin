@@ -30,7 +30,7 @@ fun main() = runBlocking {
         printLogger()
     }
 
-    val redisUrl: String = System.getenv("HENCHIES_REDISCONNECTURL")
+    val redisUrl: String = System.getenv("REDIS_URL")
         ?: DefaultRedisUrl.also { logger.warn { "Using Redis $DefaultRedisUrl due to missing HENCHIES_REDISCONNECTURL" } }
 
     val port = System.getenv("PORT")?.toInt()
