@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: henchies-backend
+    env: docker
+    branch: develop # optional (defaults to master)
+    envVars:
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: state-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: state-redis
+          property: port
+  - type: redis
+    name: state-redis
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: everywhere
