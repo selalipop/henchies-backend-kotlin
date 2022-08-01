@@ -1,9 +1,14 @@
 package controllers.photon
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import models.*
+import models.EmptyPlayerSecrets
+import models.GamePhase
+import models.PlayerColor
 import models.id.GameId
 import models.id.PlayerId
+import models.playerState
 import repository.GameStateStore
 import repository.PlayerSecretsStore
 import util.logger
@@ -29,31 +34,47 @@ suspend fun processPlayerJoined(
 
         val newState = oldState.copy(players = oldState.players + playerState(playerId, unusedColor))
 
-        if (newState.players.size < oldState.maxPlayers) {
-            return@updateGameState newState
+        if (newState.players.size >= oldState.maxPlayers) {
+            if (newState.players.size > oldState.maxPlayers) {
+                logger.warn { "exceeded max player count for game before starting for game $gameId" }
+            }
+            startGame(gameId, secretsStore, gameStateStore)
         }
 
-        if (newState.players.size > oldState.maxPlayers) {
-            logger.warn { "exceeded max player count for game before starting for game $gameId" }
-        }
-
-        logger.info { "starting game $gameId after player $playerId joined" }
-        return@updateGameState startGame(gameId, newState, secretsStore)
+        return@updateGameState newState
     }
 }
 
 
-private suspend fun startGame(gameId: GameId, state: GameState, playerSecretsStore: PlayerSecretsStore): GameState {
+private suspend fun startGame(
+    gameId: GameId,
+    playerSecretsStore: PlayerSecretsStore,
+    gameStateStore: GameStateStore
+) = coroutineScope {
     delay(WaitingForLeavingPlayerDelay)
 
-    //Update imposters
-    state.players.shuffled().forEachIndexed { index, player ->
-        if (index < state.imposterCount) {
-            playerSecretsStore.updatePlayerSecrets(gameId, player.id) { secrets ->
-                secrets.copy(isImposter = true)
-            }
+    gameStateStore.updateGameState(gameId) { state ->
+        if (state.phase != GamePhase.WaitingForPlayers ||
+            state.players.size < state.maxPlayers
+        ) {
+            //Someone left during the delay, or the game already started
+            return@updateGameState state
         }
+
+        //Update imposters
+        state.players.shuffled()
+            .mapIndexed { index, player ->
+                async {
+                    playerSecretsStore.updatePlayerSecrets(gameId, player.id) { secrets ->
+                        //The first X players in the shuffled list are imposters
+                        secrets.copy(isImposter = index < state.imposterCount)
+                    }
+                }
+            }.forEach { it.await() }
+
+
+        return@updateGameState state.copy(phase = GamePhase.Started)
     }
 
-    return state.copy(phase = GamePhase.Started)
 }
+

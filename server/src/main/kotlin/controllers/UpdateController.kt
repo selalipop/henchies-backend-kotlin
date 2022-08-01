@@ -8,9 +8,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ticker
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.encodeToString
-import models.ClientUpdate
-import models.GameKey
-import models.PingUpdate
+import models.*
 import models.id.GameId
 import models.id.PlayerId
 import repository.GameKeyStore
@@ -51,7 +49,7 @@ class UpdateController(
 
         val pingFlow = ticker(10.seconds.toLongMilliseconds())
             .consumeAsFlow()
-            .map { PingUpdate }
+            .map { ClientUpdate.Ping }
 
         flowOf(
             clientUpdates,
@@ -90,11 +88,16 @@ class UpdateController(
         }
 
         return Ok(
-            flowOf(
+            merge(
                 gameStateUpdates,
                 playerSecretUpdates
-            ).flattenMerge()
-                .map { it.toUpdate() }
+            )
+                .transform {
+                    when (it) {
+                        is GameState -> emit(ClientUpdate(gameState = it))
+                        is PlayerSecrets -> emit(ClientUpdate(playerSecrets = it))
+                    }
+                }
         )
     }
 

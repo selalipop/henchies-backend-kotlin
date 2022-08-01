@@ -3,18 +3,17 @@ package models
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-val PingUpdate = ClientUpdate(null, null, true)
 
 @Serializable
 data class ClientUpdate(
     @SerialName("gameState")
-    val gameState: GameState?,
+    val gameState: GameState? = null,
     @SerialName("playerSecrets")
-    val playerSecrets: PlayerSecrets?,
+    val playerSecrets: PlayerSecrets? = null,
     @SerialName("isPing")
-    val isPing: Boolean
-)
-
-interface ClientUpdatePackable {
-    fun toUpdate(): ClientUpdate
+    val isPing: Boolean = false
+){
+    companion object{
+       val Ping = ClientUpdate(isPing = true)
+    }
 }

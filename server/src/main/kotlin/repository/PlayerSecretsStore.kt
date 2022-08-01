@@ -1,7 +1,9 @@
 package repository
 
 import com.github.michaelbull.result.Result
+import com.github.michaelbull.result.map
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import models.PlayerSecrets
 import models.SavedGameKey
 import models.id.GameId
@@ -28,4 +30,6 @@ interface PlayerSecretsStore {
 
     suspend fun clearPlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Unit, Error>
     suspend fun observePlayerSecrets(gameId: GameId, playerId: PlayerId): Result<Flow<PlayerSecrets>, Error>
+    suspend fun getPlayerSecrets(gameId: GameId, playerId: PlayerId) =
+        observePlayerSecrets(gameId,playerId).map { it.first() }
 }

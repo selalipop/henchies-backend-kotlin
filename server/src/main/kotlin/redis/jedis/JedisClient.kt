@@ -3,11 +3,9 @@ package redis.jedis
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.mapError
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.*
 import redis.RedisClient
 import redis.RedisError
 import redis.clients.jedis.Jedis
@@ -18,23 +16,28 @@ import util.error.err
 import util.error.resultOf
 import util.logger
 import kotlin.concurrent.thread
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 class JedisClient(private val jedisPool: JedisPool) : RedisClient {
 
     val subscriptions: MutableMap<String, BroadcastChannel<String>> = mutableMapOf()
 
     init {
-        thread {
-            while (!jedisPool.isClosed) {
-                resultOf {
-                    jedisPool.resource.use { jedis ->
-                        jedis.psubscribe(listener, "*")
-                    }
-                }.mapError { err ->
-                    logger.error(err) { "error while listening for Jedis messages" }
-                }
-            }
-        }
+        GlobalScope.launch(Dispatchers.IO) {
+           flow<Unit> {
+               jedisPool.resource.use { jedis ->
+                   jedis.psubscribe(listener, "*")
+               }
+           }.retryWhen { error, attemptCount ->
+               logger.error(error) { "error while listening for Jedis messages" }
+               //Exponential backoff + random jitter
+               val backoffMs = (2.0.pow(attemptCount.toInt()) +
+                       (1000 * Math.random())).toLong()
+               delay(backoffMs)
+               !jedisPool.isClosed
+           }.collect()
+       }
     }
 
     private val listener = object : JedisPubSub() {
@@ -66,10 +69,7 @@ class JedisClient(private val jedisPool: JedisPool) : RedisClient {
     }
 
     override suspend fun set(
-        key: String,
-        publishKey: String?,
-        value: String,
-        params: SetParams
+        key: String, publishKey: String?, value: String, params: SetParams
     ): Result<Unit, RedisError> = jedis { j ->
         j.set(key, value, params)
         publishKey?.let {
@@ -79,10 +79,7 @@ class JedisClient(private val jedisPool: JedisPool) : RedisClient {
     }
 
     override suspend fun update(
-        key: String,
-        publishKey: String?,
-        params: SetParams,
-        update: suspend (String) -> String
+        key: String, publishKey: String?, params: SetParams, update: suspend (String) -> String
     ): Result<Unit, RedisError> = jedis { j ->
         j.watch(key)
         val currentValue = j.get(key) ?: return@jedis err(RedisError.MissingKey)

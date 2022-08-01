@@ -11,9 +11,6 @@ data class PlayerSecrets(
     val isImposter: Boolean,
     @SerialName("createdAt")
     val createdAt: Long = getUnixTime()
-) : ClientUpdatePackable {
-
-
-    override fun toUpdate() = ClientUpdate(null, this, false)
+) {
     fun withUpdatedTime() = this.copy(createdAt = getUnixTime())
 }

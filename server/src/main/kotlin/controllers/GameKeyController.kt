@@ -23,7 +23,7 @@ class GameKeyController(
 
         val (savedKey, err) = gameKeyStore.createOrRetrieveGameKey(gameId, playerId, ctx.request.origin.host)
         if (savedKey == null || err != null) {
-            throw Error("Failed to retrieve game key, game ID: $gameId player ID: $playerId")
+            throw Error("Failed to retrieve game key, game ID: $gameId player ID: $playerId", err)
         }
         ctx.respond(getGameKeyResponse(savedKey.key))
     }

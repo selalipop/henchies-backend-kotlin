@@ -19,11 +19,7 @@ data class GameState(
     val spawnedItems: List<GameItem>,
     @SerialName("createdAt")
     val createdAt: Long = getUnixTime(),
-) : ClientUpdatePackable {
-
+)  {
     val isGameStarted = phase >= GamePhase.Started
-
-    override fun toUpdate() = ClientUpdate(this, null, false)
-
     fun withUpdatedTime(): GameState = this.copy(createdAt = getUnixTime())
 }

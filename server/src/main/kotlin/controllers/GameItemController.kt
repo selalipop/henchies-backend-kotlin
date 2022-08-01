@@ -31,30 +31,29 @@ class GameItemController(
         val definition = GameItemDefinition.getByResourceId(resourceId)
             ?: throw Error("Failed to get game item definition, game ID: $gameId player ID: $playerId resourceId: $resourceId")
 
-        val (secrets, error) = playerSecretsStore.observePlayerSecrets(gameId, playerId)
+        val (playerSecrets, error) = playerSecretsStore.getPlayerSecrets(gameId, playerId)
 
-       if(secrets == null || error != null){
+        if (playerSecrets == null || error != null) {
             throw Error("Failed to observer player secrets when creating item", error)
         }
 
-        val playerSecrets = secrets.first()
 
-        val canCreate = when(definition.createRules){
+        val canCreate = when (definition.createRules) {
             CreateRules.Anyone -> true
             CreateRules.ImposterOnly -> playerSecrets.isImposter
             CreateRules.HenchieOnly -> !playerSecrets.isImposter
         }
 
-        if(!canCreate){
+        if (!canCreate) {
             throw Error("Player $playerId cannot create item $definition based on CreateRules")
         }
 
         val newItem = GameItem(definition, position, rotation)
 
-        gameStateStore.updateGameState(gameId){
+        gameStateStore.updateGameState(gameId) {
             it.copy(spawnedItems = it.spawnedItems + newItem)
         }
-        logger.info { "Created game item $newItem in game $gameId for player $playerId" }
+        logger.debug { "Created game item $newItem in game $gameId for player $playerId" }
         ctx.respond(newItem)
     }
 }
