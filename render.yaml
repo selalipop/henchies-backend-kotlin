@@ -14,9 +14,11 @@ services:
           type: redis
           name: state-redis
           property: port
+    region: oregon
   - type: redis
     name: state-redis
     ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
     plan: free
+    region: oregon
