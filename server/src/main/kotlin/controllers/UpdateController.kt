@@ -60,7 +60,7 @@ class UpdateController(
             .collect {
                 val encodedValue = JSON.encodeToString(it)
                 logger.info("Sending value '$encodedValue' to player '$playerId'")
-                ctx.outgoing.offer(Frame.Text(encodedValue))
+                ctx.outgoing.trySend(Frame.Text(encodedValue))
             }
 
 

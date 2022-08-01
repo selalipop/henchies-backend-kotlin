@@ -46,7 +46,7 @@ class JedisClient(private val jedisPool: JedisPool) : RedisClient {
                 if (this.isClosedForSend) {
                     subscriptions.remove(channel)
                 } else {
-                    message?.let { offer(it) }
+                    message?.let { trySend(it) }
                 }
             }
         }
