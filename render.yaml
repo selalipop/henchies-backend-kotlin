@@ -8,7 +8,7 @@ services:
         fromService:
           type: redis
           name: state-redis
-          property: host
+          property: host # available properties are listed below
       - key: REDIS_PORT
         fromService:
           type: redis
@@ -19,3 +19,4 @@ services:
     ipAllowList:
       - source: 0.0.0.0/0
         description: everywhere
+    plan: free
