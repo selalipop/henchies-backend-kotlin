@@ -24,29 +24,25 @@ import repository.redis.RedisPlayerSecretsStore
 import util.logger
 
 private const val DefaultPort = 23567
-private const val DefaultRedisHost = "redis"
-private const val DefaultRedisPort = 6379
+private const val DefaultRedisUrl = "redis://redis"
 fun main() = runBlocking {
     startKoin {
         printLogger()
     }
 
-    val redisHost: String = System.getenv("REDIS_HOST")
-        ?: DefaultRedisHost.also { logger.warn { "Using Redis $DefaultRedisHost due to missing REDIS_HOST" } }
-
-    val redisPort: Int = System.getenv("REDIS_PORT").toIntOrNull()
-        ?: DefaultRedisPort.also { logger.warn { "Using Redis $DefaultRedisPort due to missing REDIS_PORT" } }
+    val redisUrl: String = System.getenv("REDIS_URL")
+        ?: DefaultRedisUrl.also { logger.warn { "Using Redis $DefaultRedisUrl due to missing REDIS_URL" } }
 
     val port = System.getenv("PORT")?.toInt()
         ?: DefaultPort.also { logger.warn { "Server binding to port $DefaultPort due to missing PORT" } }
 
-    loadKoinModules(listOf(appModule(redisHost,redisPort)))
+    loadKoinModules(listOf(appModule(redisUrl)))
 
     Server().serve(port)
 }
 
 
-fun appModule(redisHost: String, redisPort: Int) = module {
+fun appModule(redisUrl: String) = module {
     singleBy<GameStateStore, RedisGameStateStore>()
     singleBy<PlayerSecretsStore, RedisPlayerSecretsStore>()
     singleBy<GameKeyStore, RedisGameKeyStore>()
@@ -62,6 +58,6 @@ fun appModule(redisHost: String, redisPort: Int) = module {
     single<PlayerLeftController>()
     single<PlayerJoinedController>()
 
-    single { JedisPool(redisHost, redisPort) }
+    single { JedisPool(redisUrl) }
     factory<Jedis> { get<JedisPool>().resource }
 }
