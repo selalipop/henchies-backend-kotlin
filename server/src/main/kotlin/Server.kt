@@ -25,7 +25,8 @@ import util.ktor.forPhotonRoute
 import util.ktor.forRoute
 import util.ktor.forWsRoute
 import util.logger
-import kotlin.time.seconds
+import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class Server : KoinComponent {
@@ -49,7 +50,7 @@ class Server : KoinComponent {
         server.start(wait = true)
     }
 
-    private fun Application.installExtensions() {
+    fun Application.installExtensions() {
         install(XForwardedHeaderSupport)
         install(ContentNegotiation) {
             json(JSON)
@@ -93,8 +94,9 @@ class Server : KoinComponent {
             }
         }
         install(WebSockets) {
-            pingPeriod = 30.seconds.toJavaDuration()
-            timeout = 40.seconds.toJavaDuration()
+            //Track to use kotlin time classes https://youtrack.jetbrains.com/issue/KT-50516
+            pingPeriod = Duration.ofSeconds(30)
+            timeout = Duration.ofSeconds(40)
             maxFrameSize = Long.MAX_VALUE
             masking = false
         }
